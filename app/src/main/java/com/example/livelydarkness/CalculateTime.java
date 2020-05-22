@@ -20,8 +20,8 @@ public class CalculateTime {
         long[] ret = new long[2];
         /*
          This return integer-array will have length of two.
-         ret[0] will have the time user was inside of the geoscape radius.
-         ret[1] will have the time user was outside of the geoscape radius.
+         ret[0] will have the time user was inside of the geofence radius.
+         ret[1] will have the time user was outside of the geofence radius.
          */
 
         boolean isInside = true;
