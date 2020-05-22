@@ -1,6 +1,8 @@
 package com.example.livelydarkness;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -9,6 +11,29 @@ public class CalculateTime {
 
     public CalculateTime(String input) {
         file = input;
+    }
+
+    /**
+     * Given the string generated from fileToStr(), the function will divide the string and group
+     * the string with same dates.
+     * @return Map which the Key is the String of date, and Value is the substring which will be
+     * used at trimByTimes()
+     */
+    public Map<String, String> divideByDates() {
+        Map<String, String> ret = new HashMap<>();
+
+        return ret;
+    }
+
+    /**
+     * Trims all times that are outside from 0700 to 1800
+     * @param input
+     * @return
+     */
+    public ArrayList<Long> trimByTimes(String input) {
+        ArrayList<Long> ret = new ArrayList<>();
+
+        return ret;
     }
 
     /**
