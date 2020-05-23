@@ -68,6 +68,7 @@ public class LocationBroadcastReceiver extends BroadcastReceiver {
 
     private String getLastEventType(Context context) {
         File logFile = new File(context.getFilesDir(), Constants.LOG_FILE_NAME);
+        String ret = null;
 
         try {
             // Get the last line of the log file.
@@ -82,27 +83,30 @@ public class LocationBroadcastReceiver extends BroadcastReceiver {
                 lastLine = currentLine;
             }
 
-            if (lastLine == null) {
-                // The log file is empty.
-                return null;
+            if (lastLine != null) {
+                // The log file is not empty.
+                // Get the first word of the last line.
+                String[] words = lastLine.split(" ");
+                if (words.length < 1) {
+                    // Last line is empty.
+                    throw new Exception("Invalid format");
+                }
+                if (words[0].equals(Constants.ENTER_EVENT) || words[0].equals(Constants.EXIT_EVENT)) {
+                    // Last event type found.
+                    ret = words[0];
+                } else {
+                    // The first word is neither ENTER nor EXIT.
+                    throw new Exception("Invalid event type.");
+                }
             }
 
-            // Get the first word of the last line.
-            String[] words = lastLine.split(" ");
-            if (words.length < 1) {
-                // Last line is empty.
-                throw new Exception("Invalid format");
-            }
-            if (words[0].equals(Constants.ENTER_EVENT) || words[0].equals(Constants.EXIT_EVENT)) {
-                // Last event type found.
-                return words[0];
-            }
-            // The first word is neither ENTER nor EXIT.
-            throw new Exception("Invalid event type.");
+            br.close();
+            fr.close();
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
-            return null;
         }
+
+        return ret;
     }
 
     /**
@@ -121,6 +125,7 @@ public class LocationBroadcastReceiver extends BroadcastReceiver {
             PrintWriter writer = new PrintWriter(fw);
             writer.println(String.format("%s %d %f %f", transitionType, timestamp, latitude, longitude));
             writer.close();
+            fw.close();
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         }
