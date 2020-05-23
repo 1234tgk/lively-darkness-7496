@@ -4,10 +4,13 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.os.Bundle;
 
+import com.google.android.gms.location.LocationRequest;
+
 import java.io.File;
 import java.io.FileReader;
 
 public class MainActivity extends AppCompatActivity {
+    private static final long LOCATION_UPDATE_INTERVAL = 1000; // Interval in ms between location updates.
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,5 +46,10 @@ public class MainActivity extends AppCompatActivity {
         return builder.toString();
     }
 
-
+    private LocationRequest getLocationRequest() {
+        LocationRequest locationRequest =LocationRequest.create();
+        locationRequest.setInterval(LOCATION_UPDATE_INTERVAL);
+        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        return locationRequest;
+    }
 }
