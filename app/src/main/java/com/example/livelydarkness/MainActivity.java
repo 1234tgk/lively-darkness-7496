@@ -86,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
 
         HashMap<String, Double> result = targetObj.organizeAndCalculate();
         for (Map.Entry<String, Double> entry : result.entrySet()) {
-            builder.append("Time the user has spend outside on " + entry.getKey() + ": " + String.format("%.3f", entry.getValue()) + "\n");
+            builder.append("Time under the Sun on " + entry.getKey() + ": " + String.format("%.3f", entry.getValue()) + "\n");
         }
         targetView.setText(builder.toString());
     }
