@@ -29,7 +29,7 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
-    private static final long LOCATION_UPDATE_INTERVAL = 1000; // Interval in ms between location updates.
+    private static final long LOCATION_UPDATE_INTERVAL = 5000; // Interval in ms between location updates.
     private static final int LOCATION_PENDING_INTENT_RC = 234;
     private static final int PERMISSION_RC = 567;
 

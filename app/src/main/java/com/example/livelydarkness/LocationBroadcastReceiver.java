@@ -34,7 +34,7 @@ public class LocationBroadcastReceiver extends BroadcastReceiver {
             );
             String lastEventType = getLastEventType(context);
             String currentEventType = isIndoors(location.getLatitude(), location.getLongitude()) ? Constants.ENTER_EVENT : Constants.EXIT_EVENT;
-            if (!lastEventType.equals(currentEventType)) {
+            if (lastEventType == null || !lastEventType.equals(currentEventType)) {
                 // Current event type is different from last event type.
                 // Event should be logged.
                 writeToLogFile(
@@ -73,6 +73,9 @@ public class LocationBroadcastReceiver extends BroadcastReceiver {
             // Get the last line of the log file.
             String lastLine = null;
             String currentLine = null;
+            if (!logFile.exists()) {
+                logFile.createNewFile();
+            }
             FileReader fr = new FileReader(logFile);
             BufferedReader br = new BufferedReader(fr);
             while ((currentLine = br.readLine()) != null) {
