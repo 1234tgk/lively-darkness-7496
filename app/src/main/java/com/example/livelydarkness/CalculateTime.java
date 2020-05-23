@@ -33,7 +33,12 @@ public class CalculateTime {
 
         for (String entry : rawInfo) {
             components = entry.split("\\s");
-            ret.add(new TimeEntry(components[0].equals("ENTER"), Long.parseLong(components[1]), Double.parseDouble(components[2]), Double.parseDouble(components[3]) ));
+            int length = components[1].length();
+            ret.add(new TimeEntry(components[0].equals("ENTER"),
+                    Long.parseLong(components[1].substring(0,length - 3)),
+                    Integer.parseInt(components[1].substring(length-3, length)),
+                    Double.parseDouble(components[2]),
+                    Double.parseDouble(components[3]) ));
         }
 
         return ret;
@@ -114,13 +119,13 @@ public class CalculateTime {
                 "ENTER 1590241769587 43.768295 -79.411784");
         ArrayList<TimeEntry> arrayTest = testing.toRawList();
         for (TimeEntry entry : arrayTest) {
-            System.out.println("" + entry.showIO() + " " + String.format("%f2", entry.showSeconds()) + " " + entry.showLat() + " " + entry.showLong());
+            System.out.println("" + entry.showIO() + " " + String.format("%.3f", entry.showSeconds()) + " " + entry.showLat() + " " + entry.showLong());
         }
 
         HashMap<String, Double> map = testing.organizeAndCalculate();
         try {
             for (Map.Entry<String, Double> entry : map.entrySet()) {
-                System.out.println(entry.getKey() + ": " + String.format("%f2", entry.getValue()));
+                System.out.println(entry.getKey() + ": " + String.format("%.3f", entry.getValue()));
             }
         } catch (Exception e) {
             e.printStackTrace();

@@ -4,24 +4,26 @@ import android.os.Build;
 
 import androidx.annotation.RequiresApi;
 
+import org.shredzone.commons.suncalc.SunTimes;
+
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 
+// Note: uses UTC, not local time
 public class TimeEntry {
-    final int SUNRISE_HOUR = 7;
-    final int SUNSET_HOUR = 18;
-
     private long seconds;
     private int milliseconds;
     private boolean io; // in or out boolean
     private double latitude;
     private double longitude;
 
-    public TimeEntry(boolean io, long milliseconds, double latitude, double longitude) {
+    public TimeEntry(boolean io, long seconds, int milliseconds, double latitude, double longitude) {
         this.io = io;
-        this.seconds = milliseconds / 1000;
-        this.milliseconds = (int) milliseconds % 1000;
+        this.seconds = seconds;
+        this.milliseconds = milliseconds;
         this.latitude = latitude;
         this.longitude = longitude;
     }
@@ -38,6 +40,24 @@ public class TimeEntry {
 
     public double showLong() { return longitude; }
 
+    public int showSunRise() {
+        Date date = new Date(seconds * 1000 + milliseconds);
+        SunTimes times = SunTimes.compute()
+                .on(date)
+                .at(latitude, longitude)
+                .execute();
+        return times.getRise().getHours();
+    }
+
+    public int showSunSet() {
+        Date date = new Date(seconds * 1000 + milliseconds);
+        SunTimes times = SunTimes.compute()
+                .on(date)
+                .at(latitude, longitude)
+                .execute();
+        return times.getSet().getHours();
+    }
+
     @RequiresApi(api = Build.VERSION_CODES.O) // because LccalDateTime requires API level 26
     private LocalDateTime getLDT() {
         return LocalDateTime.ofEpochSecond(seconds, milliseconds, ZoneOffset.UTC);
@@ -53,7 +73,16 @@ public class TimeEntry {
     @RequiresApi(api = Build.VERSION_CODES.O)
     public boolean isDayTime() {
         int hour = this.getLDT().getHour();
-        return SUNRISE_HOUR <= hour && hour <= SUNSET_HOUR;
+        return showSunRise() <= hour && hour <= showSunSet();
     }
 
+    public static void main(String[] args) {
+        TimeEntry testing = new TimeEntry(false, 1590237260 , 264, 37.421998, -122.084000);
+        System.out.println(testing.showSeconds());
+        System.out.println(testing.showLat());
+        System.out.println(testing.showLong());
+        System.out.println(testing.showSunRise());
+        System.out.println(testing.showSunSet());
+        System.out.println(testing.getLDT().getHour());
+    }
 }

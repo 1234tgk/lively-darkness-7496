@@ -34,4 +34,5 @@ dependencies {
     implementation 'com.google.android.gms:play-services-location:17.0.0'
 
     implementation 'org.locationtech.spatial4j:spatial4j:0.7'
+    implementation 'org.shredzone.commons:commons-suncalc:2.8'
 }
