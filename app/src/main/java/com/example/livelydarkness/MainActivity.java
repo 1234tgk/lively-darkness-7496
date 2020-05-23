@@ -1,20 +1,28 @@
 package com.example.livelydarkness;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.app.PendingIntent;
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.io.File;
 import java.io.FileReader;
 
 public class MainActivity extends AppCompatActivity {
+    private static final String TAG = "MainActivity";
     private static final long LOCATION_UPDATE_INTERVAL = 1000; // Interval in ms between location updates.
     private static final int LOCATION_PENDING_INTENT_RC = 234;
 
+    private FusedLocationProviderClient fusedLocationProviderClient;
     private PendingIntent locationPendingIntent;
 
     @Override
@@ -49,6 +57,23 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return builder.toString();
+    }
+
+    private void startListeningToLocationUpdates() {
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        fusedLocationProviderClient.requestLocationUpdates(getLocationRequest(), getLocationPendingIntent())
+                .addOnSuccessListener(this, new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void aVoid) {
+                        Log.i(TAG, "Location update enabled.");
+                    }
+                })
+                .addOnFailureListener(this, new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.i(TAG, "Failed to enable location update.");
+                    }
+                });
     }
 
     private LocationRequest getLocationRequest() {
