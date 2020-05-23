@@ -25,18 +25,15 @@ public class CalculateTime {
      */
     private ArrayList<TimeEntry> toRawList() {
         ArrayList<TimeEntry> ret = new ArrayList<>();
-        boolean firstio;
+        String[] rawInfo = rawData.split("\\n");
+        boolean firstIo;
+        String[] components;
 
-        if (rawData.indexOf("ENTER") < rawData.indexOf("EXIT"))
-            firstio = true;
-        else firstio = false;
+        if (rawInfo == null) return null; // just for safekeeping
 
-        Pattern regex = Pattern.compile("\\d+"); // find a group of numbers
-        Matcher numbers = regex.matcher(rawData);
-
-        while (numbers.find()) {
-            ret.add(new TimeEntry(firstio, Long.parseLong(numbers.group())));
-            firstio = !firstio;
+        for (String entry : rawInfo) {
+            components = entry.split("\\s");
+            ret.add(new TimeEntry(components[0].equals("ENTER"), Long.parseLong(components[1]), Double.parseDouble(components[2]), Double.parseDouble(components[3]) ));
         }
 
         return ret;
@@ -92,13 +89,13 @@ public class CalculateTime {
      * @return
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public HashMap<String, Long> organizeAndCalculate() {
+    public HashMap<String, Double> organizeAndCalculate() {
         HashMap<String, ArrayList<TimeEntry>> data = groupByDate(this.toRawList());
-        HashMap<String, Long> ret = new HashMap<>();
+        HashMap<String, Double> ret = new HashMap<>();
 
         for (Map.Entry<String, ArrayList<TimeEntry>> entry : data.entrySet()) {
             ArrayList<TimeEntry> trimed = trimByTime(entry.getValue());
-            long timeOutside = 0;
+            double timeOutside = 0;
 
             for (int i = 1 ; i < trimed.size() ; i++) {
                 if (trimed.get(i).showIO()) {
@@ -106,53 +103,24 @@ public class CalculateTime {
                 }
             }
 
-            ret.put(entry.getKey(),(long) timeOutside);
+            ret.put(entry.getKey(), timeOutside);
         }
         return ret;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     public static void main(String[] Args) {
-        CalculateTime testing = new CalculateTime("ENTER\t1589947200\n" +
-                "EXIT\t1589950800\n" +
-                "ENTER\t1589954400\n" +
-                "EXIT\t1589958000\n" +
-                "ENTER\t1589961600\n" +
-                "EXIT\t1589965200\n" +
-                "ENTER\t1589968800\n" +
-                "EXIT\t1589972400\n" +
-                "ENTER\t1589976000\n" +
-                "EXIT\t1589979600\n" +
-                "ENTER\t1589983200\n" +
-                "EXIT\t1589986800\n" +
-                "ENTER\t1589990400\n" +
-                "EXIT\t1589994000\n" +
-                "ENTER\t1589997600\n" +
-                "EXIT\t1590001200\n" +
-                "ENTER\t1590004800\n" +
-                "EXIT\t1590008400\n" +
-                "ENTER\t1590012000\n" +
-                "EXIT\t1590015600\n" +
-                "ENTER\t1590019200\n" +
-                "EXIT\t1590022800\n" +
-                "ENTER\t1590026400\n" +
-                "EXIT\t1590030000\n" +
-                "ENTER\t1590033600\n" +
-                "EXIT\t1590037200\n" +
-                "ENTER\t1590040800\n" +
-                "EXIT\t1590044400\n" +
-                "ENTER\t1590048000\n" +
-                "EXIT\t1590051600\n" +
-                "ENTER\t1590055200\n" +
-                "EXIT\t1590058800\n" +
-                "ENTER\t1590062400\n" +
-                "EXIT\t1590066000\n" +
-                "ENTER\t1590069600\n" +
-                "EXIT\t1590073200");
-        HashMap<String, Long> map = testing.organizeAndCalculate();
+        CalculateTime testing = new CalculateTime("EXIT 1590237260264 37.421998 -122.084000\n" +
+                "ENTER 1590241769587 43.768295 -79.411784");
+        ArrayList<TimeEntry> arrayTest = testing.toRawList();
+        for (TimeEntry entry : arrayTest) {
+            System.out.println("" + entry.showIO() + " " + String.format("%f2", entry.showSeconds()) + " " + entry.showLat() + " " + entry.showLong());
+        }
+
+        HashMap<String, Double> map = testing.organizeAndCalculate();
         try {
-            for (Map.Entry<String, Long> entry : map.entrySet()) {
-                System.out.println(entry.getKey() + ": " + entry.getValue());
+            for (Map.Entry<String, Double> entry : map.entrySet()) {
+                System.out.println(entry.getKey() + ": " + String.format("%f2", entry.getValue()));
             }
         } catch (Exception e) {
             e.printStackTrace();
