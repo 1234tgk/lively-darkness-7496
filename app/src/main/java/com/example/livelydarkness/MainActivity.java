@@ -2,6 +2,8 @@ package com.example.livelydarkness;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.os.Bundle;
 
 import com.google.android.gms.location.LocationRequest;
@@ -11,6 +13,9 @@ import java.io.FileReader;
 
 public class MainActivity extends AppCompatActivity {
     private static final long LOCATION_UPDATE_INTERVAL = 1000; // Interval in ms between location updates.
+    private static final int LOCATION_PENDING_INTENT_RC = 234;
+
+    private PendingIntent locationPendingIntent;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,5 +56,19 @@ public class MainActivity extends AppCompatActivity {
         locationRequest.setInterval(LOCATION_UPDATE_INTERVAL);
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         return locationRequest;
+    }
+
+    private PendingIntent getLocationPendingIntent() {
+        if (locationPendingIntent != null) {
+            return locationPendingIntent;
+        }
+        Intent intent = new Intent(this, LocationBroadcastReceiver.class);
+        locationPendingIntent = PendingIntent.getBroadcast(
+                this,
+                LOCATION_PENDING_INTENT_RC,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT
+        );
+        return locationPendingIntent;
     }
 }
