@@ -31,7 +31,7 @@ public class CalculateTime {
          */
 
         // check what is the initial status: inside or outside of the radius
-        if (file.substring(0, 5).equals("EXIT"))
+        if (file.substring(0, 5).equals(Constants.EXIT_EVENT))
             isInside = false;
         // this method may cause error if the
         // very first part of the string is not "ENTER" or "EXIT".
