@@ -10,6 +10,7 @@ import com.google.android.gms.location.LocationResult;
 
 public class LocationBroadcastReceiver extends BroadcastReceiver {
     private static final String TAG = "LocationBroadcastReceiver";
+    private static final CalculateDistance calculateDistance = new CalculateDistance();
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -33,5 +34,15 @@ public class LocationBroadcastReceiver extends BroadcastReceiver {
                 latitude,
                 longitude
         ));
+    }
+
+    private boolean isIndoors(double latitude, double longitude) {
+        // TODO: User-defined indoor boundaries.
+        double originLatitude = 43.768301;
+        double originLongitude = -79.411754;
+        double indoorRadius = 20;
+
+        // Indoors if within radius.
+        return !(calculateDistance.distance(originLatitude, originLongitude, latitude, longitude) > indoorRadius);
     }
 }
