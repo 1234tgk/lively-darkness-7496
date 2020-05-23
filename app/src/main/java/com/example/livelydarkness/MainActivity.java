@@ -2,9 +2,14 @@ package com.example.livelydarkness;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
 import android.app.PendingIntent;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -16,11 +21,14 @@ import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.io.File;
 import java.io.FileReader;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private static final long LOCATION_UPDATE_INTERVAL = 1000; // Interval in ms between location updates.
     private static final int LOCATION_PENDING_INTENT_RC = 234;
+    private static final int PERMISSION_RC = 567;
 
     private FusedLocationProviderClient fusedLocationProviderClient;
     private PendingIntent locationPendingIntent;
@@ -30,6 +38,9 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        if (checkPermissions()) {
+            startListeningToLocationUpdates();
+        }
     }
 
     /**
@@ -57,6 +68,44 @@ public class MainActivity extends AppCompatActivity {
         }
 
         return builder.toString();
+    }
+
+    /**
+     * Check if the user has granted required permissions.
+     * @return true if permissions are already granted. false otherwise.
+     */
+    private boolean checkPermissions() {
+        List<String> permissions = new ArrayList<>();
+        permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
+        }
+
+        // Check if there is any permissions not granted.
+        boolean allGranted = permissions.stream()
+                .map(permission -> (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED))
+                .reduce(true, (a, b) -> a && b);
+        if (!allGranted) {
+            // There are missing permissions.
+            ActivityCompat.requestPermissions(this, permissions.toArray(new String[0]), PERMISSION_RC);
+            return false;
+        }
+        // All required permissions are already granted by the user.
+        Log.i(TAG, "Permission is already granted.");
+        return true;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        if (
+                requestCode == PERMISSION_RC
+                && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED
+        ) {
+            // Permission is granted.
+            Log.i(TAG, "User granted the permissions.");
+            startListeningToLocationUpdates();
+        }
     }
 
     private void startListeningToLocationUpdates() {
