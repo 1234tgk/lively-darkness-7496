@@ -25,7 +25,9 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
@@ -53,8 +55,6 @@ public class MainActivity extends AppCompatActivity {
      */
 
     private String fileToStr(File file) {
-        File dir = this.getFilesDir();
-        logFile = new File(dir, Constants.LOG_FILE_NAME);
 
         StringBuilder builder = new StringBuilder();
 
@@ -74,7 +74,21 @@ public class MainActivity extends AppCompatActivity {
 
     public void buttonClicked(View view) {
         Log.i(TAG, "Handling button click.");
-        // TODO: Handle button click.
+        // Is there better way to initialize the file that has to be read?
+        File dir = this.getFilesDir();
+        logFile = new File(dir, Constants.LOG_FILE_NAME);
+
+        String raw = fileToStr(logFile);
+        CalculateTime targetObj = new CalculateTime(raw);
+
+        TextView targetView = (TextView) findViewById(R.id.display);
+        StringBuilder builder = new StringBuilder();
+
+        HashMap<String, Double> result = targetObj.organizeAndCalculate();
+        for (Map.Entry<String, Double> entry : result.entrySet()) {
+            builder.append("Time the user has spend outside on " + entry.getKey() + ": " + String.format("%.3f", entry.getValue()) + "\n");
+        }
+        targetView.setText(builder.toString());
     }
 
     /**
