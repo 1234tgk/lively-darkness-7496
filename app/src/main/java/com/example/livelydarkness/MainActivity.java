@@ -76,6 +76,10 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
+    private void stopListeningToLocationUpdates() {
+        fusedLocationProviderClient.removeLocationUpdates(locationPendingIntent);
+    }
+
     private LocationRequest getLocationRequest() {
         LocationRequest locationRequest =LocationRequest.create();
         locationRequest.setInterval(LOCATION_UPDATE_INTERVAL);
