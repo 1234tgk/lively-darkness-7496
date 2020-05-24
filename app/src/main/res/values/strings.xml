@@ -25,4 +25,5 @@
     Epidemiological data shows that people who have more exposure to sunlight have less high blood pressure and cardiovascular-related mortality. While sunlight (and its UV rays) are a risk factor for skin cancer, "sun avoidance may carry more of a cost than benefit for over-all good health." A study found that there is no evidence that UV reduces lifespan in contrast to other risk factors like smoking, alcohol and high blood pressure.</string>
     <string name="citation">Source: Wikipedia</string>
     <string name="main_header">Are You Getting Enough Sunlight?</string>
+    <string name="override_button">Override With Dummy Data</string>
 </resources>

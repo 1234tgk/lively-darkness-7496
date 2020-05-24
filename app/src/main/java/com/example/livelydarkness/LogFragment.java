@@ -9,6 +9,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -19,6 +20,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 public class LogFragment extends Fragment {
     private static final String TAG = "LogFragment";
     private TextView rawLogTextView;
+    private Button overrideButton;
 
     @Nullable
     @Override
@@ -40,6 +42,16 @@ public class LogFragment extends Fragment {
                     },
                     new IntentFilter(Constants.LOCATION_UPDATE_ACTION));
         }
+
+        // Override button handler.
+        overrideButton = root.findViewById(R.id.override_button);
+        overrideButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                LogWriter.writeDummy(context);
+            }
+        });
+
 
         return root;
     }
