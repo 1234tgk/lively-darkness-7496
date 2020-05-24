@@ -10,9 +10,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.gms.location.LocationResult;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.PrintWriter;
 import java.time.Instant;
 
 public class LocationBroadcastReceiver extends BroadcastReceiver {
@@ -37,7 +34,7 @@ public class LocationBroadcastReceiver extends BroadcastReceiver {
             if (lastEventType == null || !lastEventType.equals(currentEventType)) {
                 // Current event type is different from last event type.
                 // Event should be logged.
-                writeToLogFile(
+                LogWriter.append(
                         context,
                         currentEventType,
                         Instant.now().toEpochMilli(),
@@ -66,28 +63,6 @@ public class LocationBroadcastReceiver extends BroadcastReceiver {
 
         // Indoors if within radius.
         return !(calculateDistance.distance(originLatitude, originLongitude, latitude, longitude) > indoorRadius);
-    }
-
-    /**
-     * Record transition event to the log file.
-     * @param context Android context of this event
-     * @param transitionType ENTER or EXIT
-     * @param timestamp timestamp as epoch time
-     * @param latitude latitude of the current location
-     * @param longitude longitude of the current location
-     */
-    private void writeToLogFile(Context context, String transitionType, long timestamp, double latitude, double longitude) {
-        File logFile = new File(context.getFilesDir(), Constants.LOG_FILE_NAME);
-
-        try {
-            FileWriter fw = new FileWriter(logFile, true);
-            PrintWriter writer = new PrintWriter(fw);
-            writer.println(String.format("%s %d %f %f", transitionType, timestamp, latitude, longitude));
-            writer.close();
-            fw.close();
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
-        }
     }
 
     /**
