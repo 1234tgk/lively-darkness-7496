@@ -9,30 +9,41 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends Fragment {
     private static final String TAG = "MainActivity";
 
-    private TextView targetView;
+    private RecyclerView recyclerView;
+    private RecyclerView.Adapter recyclerAdapter;
+    private RecyclerView.LayoutManager recyclerLayoutManager;
+    private List<SuntimeAdapter.SuntimeModel> suntimeDataset;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View root = inflater.inflate(R.layout.activity_main, container, false);
-
-        targetView = root.findViewById(R.id.display);
-        updateDisplay();
         Context context = getContext();
+
+        recyclerView = root.findViewById(R.id.recycler_view);
+        recyclerLayoutManager = new LinearLayoutManager(context);
+        recyclerView.setLayoutManager(recyclerLayoutManager);
+        suntimeDataset = new ArrayList<>();
+        recyclerAdapter = new SuntimeAdapter(suntimeDataset);
+        recyclerView.setAdapter(recyclerAdapter);
+
+        updateDisplay();
         if (context != null) {
             LocalBroadcastManager.getInstance(context).registerReceiver(new BroadcastReceiver() {
                 @Override
@@ -47,19 +58,19 @@ public class MainActivity extends Fragment {
 
     private void updateDisplay() {
         Context context = getContext();
-        if (context == null || targetView == null) {
+        if (context == null) {
             return;
         }
         Log.i(TAG, "Updating display.");
         String raw = LogReader.getLogString(getContext());
         CalculateTime targetObj = new CalculateTime(raw);
 
-        StringBuilder builder = new StringBuilder();
-
         HashMap<String, Double> result = targetObj.organizeAndCalculate();
+
+        suntimeDataset.clear();
         for (Map.Entry<String, Double> entry : result.entrySet()) {
-            builder.append("Time the user has spend outside on " + entry.getKey() + ": " + String.format("%.3f", entry.getValue()) + "\n");
+            suntimeDataset.add(new SuntimeAdapter.SuntimeModel(entry.getKey(), entry.getValue().toString()));
         }
-        targetView.setText(builder.toString());
+        recyclerAdapter.notifyDataSetChanged();
     }
 }
