@@ -1,173 +1,76 @@
 package com.example.livelydarkness;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
-
-import android.Manifest;
-import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.os.Build;
+import android.content.IntentFilter;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.TextView;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
 
-import com.google.android.gms.location.FusedLocationProviderClient;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Fragment {
     private static final String TAG = "MainActivity";
-    private static final long LOCATION_UPDATE_INTERVAL = 5000; // Interval in ms between location updates.
-    private static final int LOCATION_PENDING_INTENT_RC = 234;
-    private static final int PERMISSION_RC = 567;
 
-    private FusedLocationProviderClient fusedLocationProviderClient;
-    private PendingIntent locationPendingIntent;
-    private File logFile;
+    private RecyclerView recyclerView;
+    private RecyclerView.Adapter recyclerAdapter;
+    private RecyclerView.LayoutManager recyclerLayoutManager;
+    private List<SuntimeAdapter.SuntimeModel> suntimeDataset;
 
+    @Nullable
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View root = inflater.inflate(R.layout.activity_main, container, false);
+        Context context = getContext();
 
-        if (checkPermissions()) {
-            startListeningToLocationUpdates();
-        }
-    }
+        recyclerView = root.findViewById(R.id.recycler_view);
+        recyclerLayoutManager = new LinearLayoutManager(context);
+        recyclerView.setLayoutManager(recyclerLayoutManager);
+        suntimeDataset = new ArrayList<>();
+        recyclerAdapter = new SuntimeAdapter(suntimeDataset);
+        recyclerView.setAdapter(recyclerAdapter);
 
-    /**
-     * Function of reading the given file.
-     * @return String that is "ENTER \d*...EXIT \d*..."
-     */
-
-    private String fileToStr(File file) {
-
-        StringBuilder builder = new StringBuilder();
-
-        try {
-            FileReader fr = new FileReader(file);
-
-            for (int c = fr.read() ; c != -1 ; c = fr.read()) {
-                builder.append((char) c);
-            }
-            fr.close();
-        } catch (Exception e) {
-            e.printStackTrace();
+        updateDisplay();
+        if (context != null) {
+            LocalBroadcastManager.getInstance(context).registerReceiver(new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    updateDisplay();
+                }
+            }, new IntentFilter(Constants.LOCATION_UPDATE_ACTION));
         }
 
-        return builder.toString();
+        return root;
     }
 
-    public void buttonClicked(View view) {
-        Log.i(TAG, "Handling button click.");
-        // Is there better way to initialize the file that has to be read?
-        File dir = this.getFilesDir();
-        logFile = new File(dir, Constants.LOG_FILE_NAME);
-
-        String raw = fileToStr(logFile);
+    private void updateDisplay() {
+        Context context = getContext();
+        if (context == null) {
+            return;
+        }
+        Log.i(TAG, "Updating display.");
+        String raw = LogReader.getLogString(getContext());
         CalculateTime targetObj = new CalculateTime(raw);
 
-        TextView targetView = (TextView) findViewById(R.id.display);
-        StringBuilder builder = new StringBuilder();
-
         HashMap<String, Double> result = targetObj.organizeAndCalculate();
+
+        suntimeDataset.clear();
         for (Map.Entry<String, Double> entry : result.entrySet()) {
-            builder.append("Time under the Sun on " + entry.getKey() + ": " + String.format("%.3f", entry.getValue()) + "\n");
+            suntimeDataset.add(new SuntimeAdapter.SuntimeModel(entry.getKey(), entry.getValue().toString()));
         }
-        targetView.setText(builder.toString());
-    }
-
-    /**
-     * Check if the user has granted required permissions.
-     * @return true if permissions are already granted. false otherwise.
-     */
-    private boolean checkPermissions() {
-        List<String> permissions = new ArrayList<>();
-        permissions.add(Manifest.permission.ACCESS_FINE_LOCATION);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION);
-        }
-
-        // Check if there is any permissions not granted.
-        boolean allGranted = permissions.stream()
-                .map(permission -> (ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED))
-                .reduce(true, (a, b) -> a && b);
-        if (!allGranted) {
-            // There are missing permissions.
-            ActivityCompat.requestPermissions(this, permissions.toArray(new String[0]), PERMISSION_RC);
-            return false;
-        }
-        // All required permissions are already granted by the user.
-        Log.i(TAG, "Permission is already granted.");
-        return true;
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        if (
-                requestCode == PERMISSION_RC
-                && grantResults.length > 0
-                && grantResults[0] == PackageManager.PERMISSION_GRANTED
-        ) {
-            // Permission is granted.
-            Log.i(TAG, "User granted the permissions.");
-            startListeningToLocationUpdates();
-        }
-    }
-
-    private void startListeningToLocationUpdates() {
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        fusedLocationProviderClient.requestLocationUpdates(getLocationRequest(), getLocationPendingIntent())
-                .addOnSuccessListener(this, new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void aVoid) {
-                        Log.i(TAG, "Location update enabled.");
-                    }
-                })
-                .addOnFailureListener(this, new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        Log.i(TAG, "Failed to enable location update.");
-                    }
-                });
-    }
-
-    private void stopListeningToLocationUpdates() {
-        fusedLocationProviderClient.removeLocationUpdates(locationPendingIntent);
-    }
-
-    private LocationRequest getLocationRequest() {
-        LocationRequest locationRequest =LocationRequest.create();
-        locationRequest.setInterval(LOCATION_UPDATE_INTERVAL);
-        locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        return locationRequest;
-    }
-
-    private PendingIntent getLocationPendingIntent() {
-        if (locationPendingIntent != null) {
-            return locationPendingIntent;
-        }
-        Intent intent = new Intent(this, LocationBroadcastReceiver.class);
-        locationPendingIntent = PendingIntent.getBroadcast(
-                this,
-                LOCATION_PENDING_INTENT_RC,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT
-        );
-        return locationPendingIntent;
+        recyclerAdapter.notifyDataSetChanged();
     }
 }

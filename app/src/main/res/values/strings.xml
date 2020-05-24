@@ -1,3 +1,29 @@
 <resources>
     <string name="app_name">LivelyDarkness</string>
+    <string name="title_activity_container">ContainerActivity</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Lively Darkness</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="action_settings">Settings</string>
+
+    <string name="menu_main">Main</string>
+    <string name="menu_info">Info</string>
+    <string name="menu_log">Raw Log</string>
+    <string name="menu_home">Home</string>
+    <string name="menu_gallery">Gallery</string>
+    <string name="menu_slideshow">Slideshow</string>
+
+    <string name="home_second">Home Second</string>
+    <string name="header_sun">Facts about the Sun</string>
+    <string name="body_sun">The Sun is the star at the center of the Solar System. It is a nearly perfect sphere of hot plasma, with internal convective motion that generates a magnetic field via a dynamo process. It is by far the most important source of energy for life on Earth.</string>
+    <string name="header_sunlight">Facts about Sunlight</string>
+    <string name="body_sunlight">Sunlight is a portion of the electromagnetic radiation given off by the Sun, in particular infrared, visible, and ultraviolet light. On Earth, sunlight is scattered and filtered through Earth\'s atmosphere, and is obvious as daylight when the Sun is above the horizon. When direct solar radiation is not blocked by clouds, it is experienced as sunshine, a combination of bright light and radiant heat. When blocked by clouds or reflected off other objects, sunlight is diffused. The World Meteorological Organization uses the term \"sunshine duration\" to mean the cumulative time during which an area receives direct irradiance from the Sun of at least 120 watts per square meter. Other sources indicate an \"Average over the entire earth\" of \"164 Watts per square meter over a 24 hour day\"</string>
+    <string name="header_health">Health and Sunlight</string>
+    <string name="body_health">The ultraviolet radiation in sunlight has both positive and negative health effects, as it is both a principal source of vitamin D3 and a mutagen. A dietary supplement can supply vitamin D without this mutagenic effect, but bypasses natural mechanisms that would prevent overdoses of vitamin D generated internally from sunlight. Vitamin D has a wide range of positive health effects, which include strengthening bones and possibly inhibiting the growth of some cancers. Sun exposure has also been associated with the timing of melatonin synthesis, maintenance of normal circadian rhythms, and reduced risk of seasonal affective disorder.
+    Epidemiological data shows that people who have more exposure to sunlight have less high blood pressure and cardiovascular-related mortality. While sunlight (and its UV rays) are a risk factor for skin cancer, "sun avoidance may carry more of a cost than benefit for over-all good health." A study found that there is no evidence that UV reduces lifespan in contrast to other risk factors like smoking, alcohol and high blood pressure.</string>
+    <string name="citation">Source: Wikipedia</string>
+    <string name="main_header">Are You Getting Enough Sunlight?</string>
+    <string name="override_button">Override With Dummy Data</string>
 </resources>
