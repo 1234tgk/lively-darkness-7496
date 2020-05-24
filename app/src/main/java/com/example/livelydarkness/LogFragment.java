@@ -27,6 +27,7 @@ public class LogFragment extends Fragment {
 
         // Update log.
         rawLogTextView = root.findViewById(R.id.raw_log_text_view);
+        updateLogText();
         Context context = getContext();
         if (context != null) {
             LocalBroadcastManager.getInstance(context).registerReceiver(
@@ -34,12 +35,20 @@ public class LogFragment extends Fragment {
                         @Override
                         public void onReceive(Context context, Intent intent) {
                             Log.i(TAG, "Receiving local broadcast");
-                            rawLogTextView.setText(LogReader.getLogString(context));
+                            updateLogText();
                         }
                     },
                     new IntentFilter(Constants.LOCATION_UPDATE_ACTION));
         }
 
         return root;
+    }
+
+    private void updateLogText() {
+        Context context = getContext();
+        if (context == null) {
+            return;
+        }
+        rawLogTextView.setText(LogReader.getLogString(context));
     }
 }
