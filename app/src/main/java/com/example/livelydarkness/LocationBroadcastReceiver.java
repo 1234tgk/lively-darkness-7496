@@ -10,9 +10,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.gms.location.LocationResult;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.time.Instant;
@@ -34,7 +32,7 @@ public class LocationBroadcastReceiver extends BroadcastReceiver {
                     location.getLatitude(),
                     location.getLongitude()
             );
-            String lastEventType = getLastEventType(context);
+            String lastEventType = LogReader.getLastEventType(context);
             String currentEventType = isIndoors(location.getLatitude(), location.getLongitude()) ? Constants.ENTER_EVENT : Constants.EXIT_EVENT;
             if (lastEventType == null || !lastEventType.equals(currentEventType)) {
                 // Current event type is different from last event type.
@@ -68,49 +66,6 @@ public class LocationBroadcastReceiver extends BroadcastReceiver {
 
         // Indoors if within radius.
         return !(calculateDistance.distance(originLatitude, originLongitude, latitude, longitude) > indoorRadius);
-    }
-
-    private String getLastEventType(Context context) {
-        File logFile = new File(context.getFilesDir(), Constants.LOG_FILE_NAME);
-        String ret = null;
-
-        try {
-            // Get the last line of the log file.
-            String lastLine = null;
-            String currentLine = null;
-            if (!logFile.exists()) {
-                logFile.createNewFile();
-            }
-            FileReader fr = new FileReader(logFile);
-            BufferedReader br = new BufferedReader(fr);
-            while ((currentLine = br.readLine()) != null) {
-                lastLine = currentLine;
-            }
-
-            if (lastLine != null) {
-                // The log file is not empty.
-                // Get the first word of the last line.
-                String[] words = lastLine.split(" ");
-                if (words.length < 1) {
-                    // Last line is empty.
-                    throw new Exception("Invalid format");
-                }
-                if (words[0].equals(Constants.ENTER_EVENT) || words[0].equals(Constants.EXIT_EVENT)) {
-                    // Last event type found.
-                    ret = words[0];
-                } else {
-                    // The first word is neither ENTER nor EXIT.
-                    throw new Exception("Invalid event type.");
-                }
-            }
-
-            br.close();
-            fr.close();
-        } catch (Exception e) {
-            Log.e(TAG, e.getMessage());
-        }
-
-        return ret;
     }
 
     /**
