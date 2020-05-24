@@ -6,6 +6,8 @@ import android.content.Intent;
 import android.location.Location;
 import android.util.Log;
 
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
 import com.google.android.gms.location.LocationResult;
 
 import java.io.BufferedReader;
@@ -46,6 +48,8 @@ public class LocationBroadcastReceiver extends BroadcastReceiver {
                 );
             }
         }
+
+        sendLocalBroadcast(context);
     }
 
     private void logCoordinates(double latitude, double longitude) {
@@ -129,5 +133,14 @@ public class LocationBroadcastReceiver extends BroadcastReceiver {
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         }
+    }
+
+    /**
+     * Send local broadcast about location update.
+     */
+    private void sendLocalBroadcast(Context context) {
+        Log.i(TAG, "Sending local broadcast.");
+        Intent intent = new Intent(Constants.LOCATION_UPDATE_ACTION);
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
 }
