@@ -6,9 +6,8 @@ import android.util.Log;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.IOException;
 
-public class LogReader {
+public class LogReader extends LogIO {
     private static final String TAG = "LogReader";
     public static String getLogString(Context context) {
         File logFile = getLogFile(context);
@@ -69,18 +68,5 @@ public class LogReader {
         }
 
         return ret;
-    }
-
-    private static File getLogFile(Context context) {
-        File logFile = new File(context.getFilesDir(), Constants.LOG_FILE_NAME);
-        if (!logFile.exists()) {
-            try {
-                logFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.e(TAG, "Failed to create logfile.");
-            }
-        }
-        return logFile;
     }
 }

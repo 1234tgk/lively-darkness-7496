@@ -5,10 +5,9 @@ import android.util.Log;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.PrintWriter;
 
-public class LogWriter {
+public class LogWriter extends LogIO {
     private static final String TAG = "LogWriter";
     /**
      * Record transition event to the log file.
@@ -30,18 +29,5 @@ public class LogWriter {
         } catch (Exception e) {
             Log.e(TAG, e.getMessage());
         }
-    }
-
-    private static File getLogFile(Context context) {
-        File logFile = new File(context.getFilesDir(), Constants.LOG_FILE_NAME);
-        if (!logFile.exists()) {
-            try {
-                logFile.createNewFile();
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.e(TAG, "Failed to create logfile.");
-            }
-        }
-        return logFile;
     }
 }
