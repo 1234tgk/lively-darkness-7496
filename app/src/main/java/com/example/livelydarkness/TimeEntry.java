@@ -59,7 +59,7 @@ public class TimeEntry {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O) // because LccalDateTime requires API level 26
-    private LocalDateTime getLDT() {
+    public LocalDateTime getLDT() {
         return LocalDateTime.ofEpochSecond(seconds, milliseconds, ZoneOffset.UTC);
     }
 

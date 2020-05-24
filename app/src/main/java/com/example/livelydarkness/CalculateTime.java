@@ -4,6 +4,8 @@ import android.os.Build;
 
 import androidx.annotation.RequiresApi;
 
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -85,6 +87,23 @@ public class CalculateTime {
             }
         }
 
+        if (!raw.isEmpty() && raw.get(0).showIO()) {
+            LocalDateTime firstEnterLDT = raw.get(0).getLDT();
+            LocalDateTime sunRiseTimeLDT = LocalDateTime.of(firstEnterLDT.getYear(), firstEnterLDT
+                    .getMonth(), firstEnterLDT.getDayOfMonth(), raw.get(0).showSunRise(), 0);
+            raw.add(0, new TimeEntry(false, sunRiseTimeLDT.toEpochSecond(ZoneOffset.UTC),
+                    0, raw.get(0).showLat(), raw.get(0).showLong()));
+        }
+
+        if (!raw.isEmpty() && !raw.get(raw.size() - 1).showIO()) {
+            int last = raw.size() - 1;
+            LocalDateTime firstEnterLDT = raw.get(last).getLDT();
+            LocalDateTime sunSetTimeLDT = LocalDateTime.of(firstEnterLDT.getYear(), firstEnterLDT
+                    .getMonth(), firstEnterLDT.getDayOfMonth(), raw.get(last).showSunSet(), 0);
+            raw.add(new TimeEntry(true, sunSetTimeLDT.toEpochSecond(ZoneOffset.UTC),
+                    0, raw.get(last).showLat(), raw.get(last).showLong()));
+        }
+
         return raw;
     }
 
@@ -119,7 +138,8 @@ public class CalculateTime {
                 "ENTER 1590241769587 43.768295 -79.411784");
         ArrayList<TimeEntry> arrayTest = testing.toRawList();
         for (TimeEntry entry : arrayTest) {
-            System.out.println("" + entry.showIO() + " " + String.format("%.3f", entry.showSeconds()) + " " + entry.showLat() + " " + entry.showLong());
+            System.out.println("" + entry.showIO() + " " + String.format("%.3f", entry.showSeconds())
+                    + " " + entry.showLat() + " " + entry.showLong());
         }
 
         HashMap<String, Double> map = testing.organizeAndCalculate();
@@ -129,6 +149,14 @@ public class CalculateTime {
             }
         } catch (Exception e) {
             e.printStackTrace();
+        }
+
+        testing = new CalculateTime("ENTER 1590237260264 37.421998 -122.084000\n" +
+                "EXIT 1590241769587 43.768295 -79.411784");
+        arrayTest = testing.toRawList();
+        testing.trimByTime(arrayTest);
+        for (TimeEntry entry : arrayTest) {
+            System.out.println(entry.getLDT().getHour());
         }
 
     }
