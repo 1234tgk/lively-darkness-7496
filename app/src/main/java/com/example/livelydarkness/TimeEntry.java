@@ -8,22 +8,21 @@ import org.shredzone.commons.suncalc.SunTimes;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 // Note: uses UTC, not local time
 public class TimeEntry {
-    private long seconds;
-    private int milliseconds;
+    private long epochTime; // in milliseconds
     private boolean io; // in or out boolean
     private double latitude;
     private double longitude;
 
-    public TimeEntry(boolean io, long seconds, int milliseconds, double latitude, double longitude) {
+    public TimeEntry(boolean io, long epochTime, double latitude, double longitude) {
         this.io = io;
-        this.seconds = seconds;
-        this.milliseconds = milliseconds;
+        this.epochTime = epochTime;
         this.latitude = latitude;
         this.longitude = longitude;
     }
@@ -32,35 +31,37 @@ public class TimeEntry {
         return io;
     }
 
-    public double showSeconds() {
-        return seconds + milliseconds / 1000.0;
-    }
+    public long showEpochTime() { return this.epochTime; }
 
     public double showLat() { return latitude; }
 
     public double showLong() { return longitude; }
 
-    public int showSunRise() {
-        Date date = new Date(seconds * 1000 + milliseconds);
+    /**
+     * Calculate sunrise time.
+     * @return sunrise time in milliseconds.
+     */
+    public long showSunRise() {
+        Date date = new Date(epochTime);
         SunTimes times = SunTimes.compute()
                 .on(date)
                 .at(latitude, longitude)
                 .execute();
-        return times.getRise().getHours();
+        return times.getRise().getTime();
     }
 
-    public int showSunSet() {
-        Date date = new Date(seconds * 1000 + milliseconds);
+    public long showSunSet() {
+        Date date = new Date(epochTime);
         SunTimes times = SunTimes.compute()
                 .on(date)
                 .at(latitude, longitude)
                 .execute();
-        return times.getSet().getHours();
+        return times.getSet().getTime();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O) // because LccalDateTime requires API level 26
     public LocalDateTime getLDT() {
-        return LocalDateTime.ofEpochSecond(seconds, milliseconds, ZoneOffset.UTC);
+        return Instant.ofEpochMilli(epochTime).atZone(ZoneId.systemDefault()).toLocalDateTime();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -73,12 +74,12 @@ public class TimeEntry {
     @RequiresApi(api = Build.VERSION_CODES.O)
     public boolean isDayTime() {
         int hour = this.getLDT().getHour();
-        return showSunRise() <= hour && hour <= showSunSet();
+        return showSunRise() <= showEpochTime() && showEpochTime() <= showSunSet();
     }
 
     public static void main(String[] args) {
-        TimeEntry testing = new TimeEntry(false, 1590237260 , 264, 37.421998, -122.084000);
-        System.out.println(testing.showSeconds());
+        TimeEntry testing = new TimeEntry(false, 1590237260264L, 37.421998, -122.084000);
+        System.out.println(testing.showEpochTime());
         System.out.println(testing.showLat());
         System.out.println(testing.showLong());
         System.out.println(testing.showSunRise());

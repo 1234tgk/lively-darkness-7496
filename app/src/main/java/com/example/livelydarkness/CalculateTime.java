@@ -4,14 +4,10 @@ import android.os.Build;
 
 import androidx.annotation.RequiresApi;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class CalculateTime {
     private String rawData;
@@ -23,6 +19,7 @@ public class CalculateTime {
     /**
      * String to list of TimeEntry.
      * How to use: this.toRawList()
+     *
      * @return ArrayList<TimeEntry>
      */
     private ArrayList<TimeEntry> toRawList() {
@@ -31,16 +28,14 @@ public class CalculateTime {
         boolean firstIo;
         String[] components;
 
-        if (rawInfo == null) return null; // just for safekeeping
-
         for (String entry : rawInfo) {
             components = entry.split("\\s");
-            int length = components[1].length();
-            ret.add(new TimeEntry(components[0].equals("ENTER"),
-                    Long.parseLong(components[1].substring(0,length - 3)),
-                    Integer.parseInt(components[1].substring(length-3, length)),
+            ret.add(new TimeEntry(
+                    components[0].equals("ENTER"),
+                    Long.parseLong(components[1]),
                     Double.parseDouble(components[2]),
-                    Double.parseDouble(components[3]) ));
+                    Double.parseDouble(components[3])
+            ));
         }
 
         return ret;
@@ -49,6 +44,7 @@ public class CalculateTime {
     /**
      * Group all Time entries to a date with Hashmap
      * How to use: groupByDate(this.toRawList())
+     *
      * @param raw
      * @return
      */
@@ -73,6 +69,7 @@ public class CalculateTime {
     /**
      * Remove all nighttime Time entries
      * Need to iterate through map
+     *
      * @param raw
      * @return
      */
@@ -88,20 +85,23 @@ public class CalculateTime {
         }
 
         if (!raw.isEmpty() && raw.get(0).showIO()) {
-            LocalDateTime firstEnterLDT = raw.get(0).getLDT();
-            LocalDateTime sunRiseTimeLDT = LocalDateTime.of(firstEnterLDT.getYear(), firstEnterLDT
-                    .getMonth(), firstEnterLDT.getDayOfMonth(), raw.get(0).showSunRise(), 0);
-            raw.add(0, new TimeEntry(false, sunRiseTimeLDT.toEpochSecond(ZoneOffset.UTC),
-                    0, raw.get(0).showLat(), raw.get(0).showLong()));
+            TimeEntry first = raw.get(0);
+            raw.add(new TimeEntry(
+                    false,
+                    first.showSunRise(),
+                    first.showLat(),
+                    first.showLong()
+            ));
         }
 
         if (!raw.isEmpty() && !raw.get(raw.size() - 1).showIO()) {
-            int last = raw.size() - 1;
-            LocalDateTime firstEnterLDT = raw.get(last).getLDT();
-            LocalDateTime sunSetTimeLDT = LocalDateTime.of(firstEnterLDT.getYear(), firstEnterLDT
-                    .getMonth(), firstEnterLDT.getDayOfMonth(), raw.get(last).showSunSet(), 0);
-            raw.add(new TimeEntry(true, sunSetTimeLDT.toEpochSecond(ZoneOffset.UTC),
-                    0, raw.get(last).showLat(), raw.get(last).showLong()));
+            TimeEntry last = raw.get(raw.size() - 1);
+            raw.add(new TimeEntry(
+                    true,
+                    last.showSunSet(),
+                    last.showLat(),
+                    last.showLong()
+            ));
         }
 
         return raw;
@@ -110,6 +110,7 @@ public class CalculateTime {
     /**
      * Public method that utilizes all private method
      * Only calculates exit times
+     *
      * @return
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
@@ -121,9 +122,9 @@ public class CalculateTime {
             ArrayList<TimeEntry> trimed = trimByTime(entry.getValue());
             double timeOutside = 0;
 
-            for (int i = 1 ; i < trimed.size() ; i++) {
+            for (int i = 1; i < trimed.size(); i++) {
                 if (trimed.get(i).showIO()) {
-                    timeOutside += trimed.get(i).showSeconds() - trimed.get(i - 1).showSeconds();
+                    timeOutside += (trimed.get(i).showEpochTime() - trimed.get(i - 1).showEpochTime()) / 1000.0;
                 }
             }
 
@@ -138,7 +139,7 @@ public class CalculateTime {
                 "ENTER 1590241769587 43.768295 -79.411784");
         ArrayList<TimeEntry> arrayTest = testing.toRawList();
         for (TimeEntry entry : arrayTest) {
-            System.out.println("" + entry.showIO() + " " + String.format("%.3f", entry.showSeconds())
+            System.out.println("" + entry.showIO() + " " + String.format("%.3f", entry.showEpochTime())
                     + " " + entry.showLat() + " " + entry.showLong());
         }
 
