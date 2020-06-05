@@ -9,54 +9,96 @@ import org.shredzone.commons.suncalc.SunTimes;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 
 // Note: uses UTC, not local time
 public class TimeEntry {
+    private final static long ONE_DAY_IN_MILLISECONDS = 24L * 3600L * 1000L;
     private long epochTime; // in milliseconds
     private boolean io; // in or out boolean
     private double latitude;
     private double longitude;
+    private long sunrise;
+    private long sunset;
 
     public TimeEntry(boolean io, long epochTime, double latitude, double longitude) {
         this.io = io;
         this.epochTime = epochTime;
         this.latitude = latitude;
         this.longitude = longitude;
+        calculateSunTimes();
+    }
+
+    private void calculateSunTimes() {
+        Date date = new Date(epochTime);
+        SunTimes futureSuntimes = SunTimes.compute()
+                .fullCycle()
+                .at(latitude, longitude)
+                .on(date)
+                .execute();
+        long pastSunset;
+        long pastSunrise;
+        long futureSunrise = futureSuntimes.getRise().getTime();
+        long futureSunset = futureSuntimes.getSet().getTime();
+        if (futureSunrise < futureSunset) {
+            sunrise = futureSunrise;
+            for (int i = 1; sunset == 0; i++) {
+                SunTimes pastSuntimes = SunTimes.compute()
+                        .at(latitude, longitude)
+                        .on(date)
+                        .plusDays(-i)
+                        .oneDay()
+                        .execute();
+                Date x = pastSuntimes.getSet();
+                if (x != null) {
+                    sunset = x.getTime();
+                }
+            }
+        } else {
+            sunset = futureSunset;
+            for (int i = 1; sunrise == 0; i++) {
+                SunTimes pastSuntimes = SunTimes.compute()
+                        .at(latitude, longitude)
+                        .on(date)
+                        .plusDays(-i)
+                        .oneDay()
+                        .execute();
+                Date x = pastSuntimes.getRise();
+                if (x != null) {
+                    sunrise = x.getTime();
+                }
+            }
+        }
     }
 
     public boolean showIO() {
         return io;
     }
 
-    public long showEpochTime() { return this.epochTime; }
+    public long showEpochTime() {
+        return this.epochTime;
+    }
 
-    public double showLat() { return latitude; }
+    public double showLat() {
+        return latitude;
+    }
 
-    public double showLong() { return longitude; }
+    public double showLong() {
+        return longitude;
+    }
 
     /**
      * Calculate sunrise time.
+     *
      * @return sunrise time in milliseconds.
      */
     public long showSunRise() {
-        Date date = new Date(epochTime);
-        SunTimes times = SunTimes.compute()
-                .on(date)
-                .at(latitude, longitude)
-                .execute();
-        return times.getRise().getTime();
+        return sunrise;
     }
 
     public long showSunSet() {
-        Date date = new Date(epochTime);
-        SunTimes times = SunTimes.compute()
-                .on(date)
-                .at(latitude, longitude)
-                .execute();
-        return times.getSet().getTime();
+        return sunset;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.O) // because LccalDateTime requires API level 26
@@ -73,7 +115,6 @@ public class TimeEntry {
 
     @RequiresApi(api = Build.VERSION_CODES.O)
     public boolean isDayTime() {
-        int hour = this.getLDT().getHour();
         return showSunRise() <= showEpochTime() && showEpochTime() <= showSunSet();
     }
 
