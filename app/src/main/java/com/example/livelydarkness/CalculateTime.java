@@ -25,7 +25,6 @@ public class CalculateTime {
     private ArrayList<TimeEntry> toRawList() {
         ArrayList<TimeEntry> ret = new ArrayList<>();
         String[] rawInfo = rawData.split("\\n");
-        boolean firstIo;
         String[] components;
 
         for (String entry : rawInfo) {
@@ -75,36 +74,43 @@ public class CalculateTime {
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
     private ArrayList<TimeEntry> trimByTime(ArrayList<TimeEntry> raw) {
-        int i = 0;
-        while (i < raw.size()) {
-            if (raw.get(i).isDayTime()) {
-                ++i;
-            } else {
-                raw.remove(i);
+        ArrayList<TimeEntry> ret = new ArrayList<>();
+        boolean isFirst = true; // Flag to check if the time entry is the first of the day.
+        TimeEntry lastTimeEntry = null;
+        for (TimeEntry entry : raw) {
+            if (!entry.isDayTime()) {
+                // Ignore all night time entries.
+                continue;
             }
+            if (isFirst && entry.showIO()) {
+                // Add dummy exit time entry before the first time entry,
+                // if the first time entry is enter type.
+                ret.add(new TimeEntry(
+                        false,
+                        entry.showSunRise(),
+                        entry.showLat(),
+                        entry.showLong()
+                ));
+            }
+            isFirst = false;
+
+            // Insert day time entries.
+            ret.add(entry);
+            lastTimeEntry = entry;
         }
 
-        if (!raw.isEmpty() && raw.get(0).showIO()) {
-            TimeEntry first = raw.get(0);
-            raw.add(new TimeEntry(
-                    false,
-                    first.showSunRise(),
-                    first.showLat(),
-                    first.showLong()
-            ));
-        }
-
-        if (!raw.isEmpty() && !raw.get(raw.size() - 1).showIO()) {
-            TimeEntry last = raw.get(raw.size() - 1);
-            raw.add(new TimeEntry(
+        if (lastTimeEntry != null && !lastTimeEntry.showIO()) {
+            // Add dummy enter time entry after the last time entry,
+            // if the last time entry is exit type.
+            ret.add(new TimeEntry(
                     true,
-                    last.showSunSet(),
-                    last.showLat(),
-                    last.showLong()
+                    lastTimeEntry.showSunSet(),
+                    lastTimeEntry.showLat(),
+                    lastTimeEntry.showLong()
             ));
         }
 
-        return raw;
+        return ret;
     }
 
     /**
@@ -119,12 +125,12 @@ public class CalculateTime {
         HashMap<String, Double> ret = new HashMap<>();
 
         for (Map.Entry<String, ArrayList<TimeEntry>> entry : data.entrySet()) {
-            ArrayList<TimeEntry> trimed = trimByTime(entry.getValue());
+            ArrayList<TimeEntry> trimmed = trimByTime(entry.getValue());
             double timeOutside = 0;
 
-            for (int i = 1; i < trimed.size(); i++) {
-                if (trimed.get(i).showIO()) {
-                    timeOutside += (trimed.get(i).showEpochTime() - trimed.get(i - 1).showEpochTime()) / 1000.0;
+            for (int i = 1; i < trimmed.size(); i++) {
+                if (trimmed.get(i).showIO()) {
+                    timeOutside += (trimmed.get(i).showEpochTime() - trimmed.get(i - 1).showEpochTime()) / 1000.0;
                 }
             }
 
