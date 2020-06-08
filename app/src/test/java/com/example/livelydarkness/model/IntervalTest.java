@@ -22,6 +22,12 @@ public class IntervalTest {
     }
 
     @Test
+    public void intersectionWithNull() {
+        Interval<Integer> first = new Interval<>(10, 100);
+        Assert.assertNull(Interval.intersection(null, first));
+    }
+
+    @Test
     public void joinIntervals() {
         Interval<Integer> first = new Interval<>(10, 20);
         Interval<Integer> second = new Interval<>(15, 30);

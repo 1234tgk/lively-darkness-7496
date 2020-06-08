@@ -20,16 +20,11 @@ public class Interval<T extends Comparable<T>> {
     }
 
     public static <E extends Comparable<E>> Interval<E> intersection(Interval<E> first, Interval<E> second) {
-        E low = null;
-        E hi = null;
-        if (first == null) {
-            return second;
+        if (first == null || second == null) {
+            return null;
         }
-        if (second == null) {
-            return first;
-        }
-        low = first.lowerBound.compareTo(second.lowerBound) > 0 ? first.lowerBound : second.lowerBound;
-        hi = first.upperBound.compareTo(second.upperBound) < 0 ? first.upperBound : second.upperBound;
+        E low = first.lowerBound.compareTo(second.lowerBound) > 0 ? first.lowerBound : second.lowerBound;
+        E hi = first.upperBound.compareTo(second.upperBound) < 0 ? first.upperBound : second.upperBound;
         if (low.compareTo(hi) > 0) {
             return null;
         }
