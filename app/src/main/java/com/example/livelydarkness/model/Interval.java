@@ -36,6 +36,20 @@ public class Interval<T extends Comparable<T>> {
         return new Interval<>(low, hi);
     }
 
+    /**
+     * Join two intersecting intervals.
+     * Return null if the intervals do not intersect.
+     */
+    public static <E extends Comparable<E>> Interval<E> join(Interval<E> first, Interval<E> second) {
+        Interval<E> intersection = Interval.intersection(first, second);
+        if (intersection == null) {
+            return null;
+        }
+        E low = first.lowerBound.compareTo(second.lowerBound) < 0 ? first.lowerBound : second.lowerBound;
+        E hi = first.upperBound.compareTo(second.upperBound) > 0 ? first.upperBound : second.upperBound;
+        return new Interval<>(low, hi);
+    }
+
     @Override
     public boolean equals(@Nullable Object obj) {
         if (obj == this) {
