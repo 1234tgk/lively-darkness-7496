@@ -4,16 +4,27 @@ import android.os.Build;
 
 import androidx.annotation.RequiresApi;
 
+import com.example.livelydarkness.model.Interval;
+import com.example.livelydarkness.model.IntervalSet;
+
+import org.shredzone.commons.suncalc.SunTimes;
+
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 public class CalculateTime {
     private String rawData;
+    private GregorianCalendar today;
 
     public CalculateTime(String fileFromGeofence) {
         rawData = fileFromGeofence;
+        today = new GregorianCalendar();
     }
 
     /**
@@ -48,69 +59,92 @@ public class CalculateTime {
      * @return
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private HashMap<String, ArrayList<TimeEntry>> groupByDate(ArrayList<TimeEntry> raw) {
-        HashMap<String, ArrayList<TimeEntry>> ret = new HashMap<>();
-        ArrayList<TimeEntry> retBuilder;
+    private SortedMap<GregorianCalendar, ArrayList<TimeEntry>> groupByDate(ArrayList<TimeEntry> raw) {
+        SortedMap<GregorianCalendar, ArrayList<TimeEntry>> ret = new TreeMap<>();
 
         for (TimeEntry entry : raw) {
-            if (!ret.containsKey(entry.getDate())) {
-                retBuilder = new ArrayList<>();
-                retBuilder.add(entry);
-                ret.put(entry.getDate(), retBuilder);
+            // Convert epoch time to gregorian calendar.
+            GregorianCalendar entryCalendar = new GregorianCalendar();
+            entryCalendar.setTimeInMillis(entry.getEpochTime());
+
+            // Round calendar to date.
+            // Discard hour, minute, second and millisecond.
+            int entryYear = entryCalendar.get(Calendar.YEAR);
+            int entryMonth = entryCalendar.get(Calendar.MONTH);
+            int entryDate = entryCalendar.get(Calendar.DAY_OF_MONTH);
+            GregorianCalendar roundedEntryCalendar = new GregorianCalendar(entryYear, entryMonth, entryDate);
+
+            // Add entry to map.
+            if (!ret.containsKey(roundedEntryCalendar)) {
+                ArrayList<TimeEntry> newList = new ArrayList<>();
+                newList.add(entry);
+                ret.put(roundedEntryCalendar, newList);
             } else {
-                Objects.requireNonNull(ret.get(entry.getDate())).add(entry); // i don't know what this is, but it looks awesome
+                ret.get(roundedEntryCalendar).add(entry);
             }
         }
 
         return ret;
     }
 
+
     /**
-     * Remove all nighttime Time entries
-     * Need to iterate through map
+     * Calculate sun exposure in 1 day.
      *
-     * @param raw
-     * @return
+     * @param dayStart Starting time of the day (midnight).
+     * @param entries  Time entries
+     * @return exposure time in milliseconds
      */
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private ArrayList<TimeEntry> trimByTime(ArrayList<TimeEntry> raw) {
-        ArrayList<TimeEntry> ret = new ArrayList<>();
-        boolean isFirst = true; // Flag to check if the time entry is the first of the day.
-        TimeEntry lastTimeEntry = null;
-        for (TimeEntry entry : raw) {
-            if (!entry.isDayTime()) {
-                // Ignore all night time entries.
-                continue;
-            }
-            if (isFirst && entry.showIO()) {
-                // Add dummy exit time entry before the first time entry,
-                // if the first time entry is enter type.
-                ret.add(new TimeEntry(
-                        false,
-                        entry.showSunRise(),
-                        entry.showLat(),
-                        entry.showLong()
-                ));
-            }
-            isFirst = false;
+    private long calculateExposure(GregorianCalendar dayStart, ArrayList<TimeEntry> entries) {
+        if (entries.size() == 0) {
+            return 0;
+        }
+        // Calculate day end.
+        GregorianCalendar dayEnd = new GregorianCalendar();
+        dayEnd.setTimeInMillis(dayStart.getTimeInMillis());
+        dayEnd.add(Calendar.DATE, 1);
+        SunTimes sun = SunTimes.compute()
+                .on(dayStart)
+                .fullCycle()
+                .execute();
+        long sunrise = sun.getRise().getTime();
+        long sunset = sun.getSet().getTime();
 
-            // Insert day time entries.
-            ret.add(entry);
-            lastTimeEntry = entry;
+        // Calculate sun intervals.
+        ArrayList<Interval<Long>> sunIntervals = new ArrayList<>();
+        if (sunrise < sunset) {
+            // Case I. sunrise before sunset.
+            sunIntervals.add(new Interval<>(sunrise, sunset));
+        } else {
+            // Case II. sunset before sunrise.
+            sunIntervals.add(new Interval<>(dayStart.getTimeInMillis(), sunset));
+            if (sunrise < dayEnd.getTimeInMillis()) {
+                sunIntervals.add(new Interval<>(sunrise, dayEnd.getTimeInMillis()));
+            }
         }
 
-        if (lastTimeEntry != null && !lastTimeEntry.showIO()) {
-            // Add dummy enter time entry after the last time entry,
-            // if the last time entry is exit type.
-            ret.add(new TimeEntry(
-                    true,
-                    lastTimeEntry.showSunSet(),
-                    lastTimeEntry.showLat(),
-                    lastTimeEntry.showLong()
-            ));
+        // Calculate outdoor intervals.
+        ArrayList<Interval<Long>> outdoorIntervals = new ArrayList<>();
+        for (int i = 0; i < entries.size(); i++) {
+            if (i == 0 && entries.get(i).getIo()) {
+                // First entry is ENTER event.
+                outdoorIntervals.add(new Interval<>(dayStart.getTimeInMillis(), entries.get(i).getEpochTime()));
+            } else if (i == entries.size() - 1 && !entries.get(i).getIo()) {
+                // Last entry is EXIT event.
+                outdoorIntervals.add(new Interval<>(entries.get(i).getEpochTime(), dayEnd.getTimeInMillis()));
+            } else if (entries.get(i).getIo()) {
+                outdoorIntervals.add(new Interval<>(entries.get(i - 1).getEpochTime(), entries.get(i).getEpochTime()));
+            }
         }
 
-        return ret;
+        List<Interval<Long>> exposedInterval = IntervalSet.intersection(
+                new IntervalSet<>(sunIntervals),
+                new IntervalSet<>(outdoorIntervals)
+        ).getIntervals();
+
+        return exposedInterval.stream()
+                .map((interval) -> interval.getUpperBound() - interval.getLowerBound())
+                .reduce(0L, Long::sum);
     }
 
     /**
@@ -120,51 +154,14 @@ public class CalculateTime {
      * @return
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public HashMap<String, Double> organizeAndCalculate() {
-        HashMap<String, ArrayList<TimeEntry>> data = groupByDate(this.toRawList());
-        HashMap<String, Double> ret = new HashMap<>();
+    public SortedMap<GregorianCalendar, Long> organizeAndCalculate() {
+        SortedMap<GregorianCalendar, ArrayList<TimeEntry>> data = groupByDate(this.toRawList());
+        SortedMap<GregorianCalendar, Long> ret = new TreeMap<>();
 
-        for (Map.Entry<String, ArrayList<TimeEntry>> entry : data.entrySet()) {
-            ArrayList<TimeEntry> trimmed = trimByTime(entry.getValue());
-            double timeOutside = 0;
-
-            for (int i = 1; i < trimmed.size(); i++) {
-                if (trimmed.get(i).showIO()) {
-                    timeOutside += (trimmed.get(i).showEpochTime() - trimmed.get(i - 1).showEpochTime()) / 1000.0;
-                }
-            }
-
-            ret.put(entry.getKey(), timeOutside);
+        for (Map.Entry<GregorianCalendar, ArrayList<TimeEntry>> each : data.entrySet()) {
+            ret.put(each.getKey(), calculateExposure(each.getKey(), each.getValue()));
         }
+
         return ret;
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    public static void main(String[] Args) {
-        CalculateTime testing = new CalculateTime("EXIT 1590237260264 37.421998 -122.084000\n" +
-                "ENTER 1590241769587 43.768295 -79.411784");
-        ArrayList<TimeEntry> arrayTest = testing.toRawList();
-        for (TimeEntry entry : arrayTest) {
-            System.out.println("" + entry.showIO() + " " + String.format("%.3f", entry.showEpochTime())
-                    + " " + entry.showLat() + " " + entry.showLong());
-        }
-
-        HashMap<String, Double> map = testing.organizeAndCalculate();
-        try {
-            for (Map.Entry<String, Double> entry : map.entrySet()) {
-                System.out.println(entry.getKey() + ": " + String.format("%.3f", entry.getValue()));
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        testing = new CalculateTime("ENTER 1590237260264 37.421998 -122.084000\n" +
-                "EXIT 1590241769587 43.768295 -79.411784");
-        arrayTest = testing.toRawList();
-        testing.trimByTime(arrayTest);
-        for (TimeEntry entry : arrayTest) {
-            System.out.println(entry.getLDT().getHour());
-        }
-
     }
 }

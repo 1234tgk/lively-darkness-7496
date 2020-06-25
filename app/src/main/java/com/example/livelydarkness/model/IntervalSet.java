@@ -77,7 +77,9 @@ public class IntervalSet<T extends Comparable<T>> {
             // Check for intersection.
             Interval<T> intersection = Interval.intersection(intervalBefore, interval);
             if (intersection == null) {
-                merged.add(intervalBefore);
+                if (intervalBefore != null) {
+                    merged.add(intervalBefore);
+                }
                 intervalBefore = interval;
             } else {
                 intervalBefore = Interval.join(intervalBefore, interval);

@@ -17,13 +17,17 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 
 public class MainActivity extends Fragment {
     private static final String TAG = "MainActivity";
+    private static final DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
 
     private RecyclerView recyclerView;
     private RecyclerView.Adapter recyclerAdapter;
@@ -65,11 +69,11 @@ public class MainActivity extends Fragment {
         String raw = LogReader.getLogString(getContext());
         CalculateTime targetObj = new CalculateTime(raw);
 
-        HashMap<String, Double> result = targetObj.organizeAndCalculate();
+        SortedMap<GregorianCalendar, Long> result = targetObj.organizeAndCalculate();
 
         suntimeDataset.clear();
-        for (Map.Entry<String, Double> entry : result.entrySet()) {
-            suntimeDataset.add(new SuntimeAdapter.SuntimeModel(entry.getKey(), entry.getValue().toString()));
+        for (Map.Entry<GregorianCalendar, Long> entry : result.entrySet()) {
+            suntimeDataset.add(new SuntimeAdapter.SuntimeModel(formatter.format(entry.getKey().getTime()), entry.getValue() / 1000 / 60 + " mins"));
         }
         recyclerAdapter.notifyDataSetChanged();
     }
