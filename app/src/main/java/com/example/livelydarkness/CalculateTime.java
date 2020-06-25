@@ -4,43 +4,48 @@ import android.os.Build;
 
 import androidx.annotation.RequiresApi;
 
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import com.example.livelydarkness.model.Interval;
+import com.example.livelydarkness.model.IntervalSet;
+
+import org.shredzone.commons.suncalc.SunTimes;
+
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 public class CalculateTime {
     private String rawData;
+    private GregorianCalendar today;
 
     public CalculateTime(String fileFromGeofence) {
         rawData = fileFromGeofence;
+        today = new GregorianCalendar();
     }
 
     /**
      * String to list of TimeEntry.
      * How to use: this.toRawList()
+     *
      * @return ArrayList<TimeEntry>
      */
     private ArrayList<TimeEntry> toRawList() {
         ArrayList<TimeEntry> ret = new ArrayList<>();
         String[] rawInfo = rawData.split("\\n");
-        boolean firstIo;
         String[] components;
-
-        if (rawInfo == null) return null; // just for safekeeping
 
         for (String entry : rawInfo) {
             components = entry.split("\\s");
-            int length = components[1].length();
-            ret.add(new TimeEntry(components[0].equals("ENTER"),
-                    Long.parseLong(components[1].substring(0,length - 3)),
-                    Integer.parseInt(components[1].substring(length-3, length)),
+            ret.add(new TimeEntry(
+                    components[0].equals("ENTER"),
+                    Long.parseLong(components[1]),
                     Double.parseDouble(components[2]),
-                    Double.parseDouble(components[3]) ));
+                    Double.parseDouble(components[3])
+            ));
         }
 
         return ret;
@@ -49,115 +54,114 @@ public class CalculateTime {
     /**
      * Group all Time entries to a date with Hashmap
      * How to use: groupByDate(this.toRawList())
+     *
      * @param raw
      * @return
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
-    private HashMap<String, ArrayList<TimeEntry>> groupByDate(ArrayList<TimeEntry> raw) {
-        HashMap<String, ArrayList<TimeEntry>> ret = new HashMap<>();
-        ArrayList<TimeEntry> retBuilder;
+    private SortedMap<GregorianCalendar, ArrayList<TimeEntry>> groupByDate(ArrayList<TimeEntry> raw) {
+        SortedMap<GregorianCalendar, ArrayList<TimeEntry>> ret = new TreeMap<>();
 
         for (TimeEntry entry : raw) {
-            if (!ret.containsKey(entry.getDate())) {
-                retBuilder = new ArrayList<>();
-                retBuilder.add(entry);
-                ret.put(entry.getDate(), retBuilder);
+            // Convert epoch time to gregorian calendar.
+            GregorianCalendar entryCalendar = new GregorianCalendar();
+            entryCalendar.setTimeInMillis(entry.getEpochTime());
+
+            // Round calendar to date.
+            // Discard hour, minute, second and millisecond.
+            int entryYear = entryCalendar.get(Calendar.YEAR);
+            int entryMonth = entryCalendar.get(Calendar.MONTH);
+            int entryDate = entryCalendar.get(Calendar.DAY_OF_MONTH);
+            GregorianCalendar roundedEntryCalendar = new GregorianCalendar(entryYear, entryMonth, entryDate);
+
+            // Add entry to map.
+            if (!ret.containsKey(roundedEntryCalendar)) {
+                ArrayList<TimeEntry> newList = new ArrayList<>();
+                newList.add(entry);
+                ret.put(roundedEntryCalendar, newList);
             } else {
-                Objects.requireNonNull(ret.get(entry.getDate())).add(entry); // i don't know what this is, but it looks awesome
+                ret.get(roundedEntryCalendar).add(entry);
             }
         }
 
         return ret;
     }
 
+
     /**
-     * Remove all nighttime Time entries
-     * Need to iterate through map
-     * @param raw
-     * @return
+     * Calculate sun exposure in 1 day.
+     *
+     * @param dayStart Starting time of the day (midnight).
+     * @param entries  Time entries
+     * @return exposure time in milliseconds
      */
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    private ArrayList<TimeEntry> trimByTime(ArrayList<TimeEntry> raw) {
-        int i = 0;
-        while (i < raw.size()) {
-            if (raw.get(i).isDayTime()) {
-                ++i;
-            } else {
-                raw.remove(i);
+    private long calculateExposure(GregorianCalendar dayStart, ArrayList<TimeEntry> entries) {
+        if (entries.size() == 0) {
+            return 0;
+        }
+        // Calculate day end.
+        GregorianCalendar dayEnd = new GregorianCalendar();
+        dayEnd.setTimeInMillis(dayStart.getTimeInMillis());
+        dayEnd.add(Calendar.DATE, 1);
+        SunTimes sun = SunTimes.compute()
+                .on(dayStart)
+                .fullCycle()
+                .execute();
+        long sunrise = sun.getRise().getTime();
+        long sunset = sun.getSet().getTime();
+
+        // Calculate sun intervals.
+        ArrayList<Interval<Long>> sunIntervals = new ArrayList<>();
+        if (sunrise < sunset) {
+            // Case I. sunrise before sunset.
+            sunIntervals.add(new Interval<>(sunrise, sunset));
+        } else {
+            // Case II. sunset before sunrise.
+            sunIntervals.add(new Interval<>(dayStart.getTimeInMillis(), sunset));
+            if (sunrise < dayEnd.getTimeInMillis()) {
+                sunIntervals.add(new Interval<>(sunrise, dayEnd.getTimeInMillis()));
             }
         }
 
-        if (!raw.isEmpty() && raw.get(0).showIO()) {
-            LocalDateTime firstEnterLDT = raw.get(0).getLDT();
-            LocalDateTime sunRiseTimeLDT = LocalDateTime.of(firstEnterLDT.getYear(), firstEnterLDT
-                    .getMonth(), firstEnterLDT.getDayOfMonth(), raw.get(0).showSunRise(), 0);
-            raw.add(0, new TimeEntry(false, sunRiseTimeLDT.toEpochSecond(ZoneOffset.UTC),
-                    0, raw.get(0).showLat(), raw.get(0).showLong()));
+        // Calculate outdoor intervals.
+        ArrayList<Interval<Long>> outdoorIntervals = new ArrayList<>();
+        for (int i = 0; i < entries.size(); i++) {
+            if (i == 0 && entries.get(i).getIo()) {
+                // First entry is ENTER event.
+                outdoorIntervals.add(new Interval<>(dayStart.getTimeInMillis(), entries.get(i).getEpochTime()));
+            } else if (i == entries.size() - 1 && !entries.get(i).getIo()) {
+                // Last entry is EXIT event.
+                outdoorIntervals.add(new Interval<>(entries.get(i).getEpochTime(), dayEnd.getTimeInMillis()));
+            } else if (entries.get(i).getIo()) {
+                outdoorIntervals.add(new Interval<>(entries.get(i - 1).getEpochTime(), entries.get(i).getEpochTime()));
+            }
         }
 
-        if (!raw.isEmpty() && !raw.get(raw.size() - 1).showIO()) {
-            int last = raw.size() - 1;
-            LocalDateTime firstEnterLDT = raw.get(last).getLDT();
-            LocalDateTime sunSetTimeLDT = LocalDateTime.of(firstEnterLDT.getYear(), firstEnterLDT
-                    .getMonth(), firstEnterLDT.getDayOfMonth(), raw.get(last).showSunSet(), 0);
-            raw.add(new TimeEntry(true, sunSetTimeLDT.toEpochSecond(ZoneOffset.UTC),
-                    0, raw.get(last).showLat(), raw.get(last).showLong()));
-        }
+        List<Interval<Long>> exposedInterval = IntervalSet.intersection(
+                new IntervalSet<>(sunIntervals),
+                new IntervalSet<>(outdoorIntervals)
+        ).getIntervals();
 
-        return raw;
+        return exposedInterval.stream()
+                .map((interval) -> interval.getUpperBound() - interval.getLowerBound())
+                .reduce(0L, Long::sum);
     }
 
     /**
      * Public method that utilizes all private method
      * Only calculates exit times
+     *
      * @return
      */
     @RequiresApi(api = Build.VERSION_CODES.O)
-    public HashMap<String, Double> organizeAndCalculate() {
-        HashMap<String, ArrayList<TimeEntry>> data = groupByDate(this.toRawList());
-        HashMap<String, Double> ret = new HashMap<>();
+    public SortedMap<GregorianCalendar, Long> organizeAndCalculate() {
+        SortedMap<GregorianCalendar, ArrayList<TimeEntry>> data = groupByDate(this.toRawList());
+        SortedMap<GregorianCalendar, Long> ret = new TreeMap<>();
 
-        for (Map.Entry<String, ArrayList<TimeEntry>> entry : data.entrySet()) {
-            ArrayList<TimeEntry> trimed = trimByTime(entry.getValue());
-            double timeOutside = 0;
-
-            for (int i = 1 ; i < trimed.size() ; i++) {
-                if (trimed.get(i).showIO()) {
-                    timeOutside += trimed.get(i).showSeconds() - trimed.get(i - 1).showSeconds();
-                }
-            }
-
-            ret.put(entry.getKey(), timeOutside);
+        for (Map.Entry<GregorianCalendar, ArrayList<TimeEntry>> each : data.entrySet()) {
+            ret.put(each.getKey(), calculateExposure(each.getKey(), each.getValue()));
         }
+
         return ret;
-    }
-
-    @RequiresApi(api = Build.VERSION_CODES.O)
-    public static void main(String[] Args) {
-        CalculateTime testing = new CalculateTime("EXIT 1590237260264 37.421998 -122.084000\n" +
-                "ENTER 1590241769587 43.768295 -79.411784");
-        ArrayList<TimeEntry> arrayTest = testing.toRawList();
-        for (TimeEntry entry : arrayTest) {
-            System.out.println("" + entry.showIO() + " " + String.format("%.3f", entry.showSeconds())
-                    + " " + entry.showLat() + " " + entry.showLong());
-        }
-
-        HashMap<String, Double> map = testing.organizeAndCalculate();
-        try {
-            for (Map.Entry<String, Double> entry : map.entrySet()) {
-                System.out.println(entry.getKey() + ": " + String.format("%.3f", entry.getValue()));
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        testing = new CalculateTime("ENTER 1590237260264 37.421998 -122.084000\n" +
-                "EXIT 1590241769587 43.768295 -79.411784");
-        arrayTest = testing.toRawList();
-        testing.trimByTime(arrayTest);
-        for (TimeEntry entry : arrayTest) {
-            System.out.println(entry.getLDT().getHour());
-        }
-
     }
 }
