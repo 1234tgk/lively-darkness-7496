@@ -117,14 +117,4 @@ public class TimeEntry {
     public boolean isDayTime() {
         return showSunRise() <= showEpochTime() && showEpochTime() <= showSunSet();
     }
-
-    public static void main(String[] args) {
-        TimeEntry testing = new TimeEntry(false, 1590237260264L, 37.421998, -122.084000);
-        System.out.println(testing.showEpochTime());
-        System.out.println(testing.showLat());
-        System.out.println(testing.showLong());
-        System.out.println(testing.showSunRise());
-        System.out.println(testing.showSunSet());
-        System.out.println(testing.getLDT().getHour());
-    }
 }
